@@ -1,66 +1,283 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Requisitos del Proyecto
 
-## About Laravel
+1. **Login en Laravel con OAuth2**, debidamente validado.
+2. **Carga masiva de datos** desde un archivo Excel a la base de datos.
+3. **Procedimientos almacenados** para migrar datos desde una tabla temporal a tablas estructuradas.
+4. **Endpoints** para consultar personas, sus teléfonos y direcciones.
+5. **Roles de usuario**:
+    - `admin`: Puede cargar archivos Excel y consultar datos.
+    - `user`: Solo puede consultar datos.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requisitos previos
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Antes de iniciar, asegúrate de tener instalado:
 
-## Learning Laravel
+- **PHP >= 8.1**
+- **Composer**
+- **MySQL**
+- **Node.js y npm** (para manejo de dependencias de frontend, si es necesario en el futuro)
+- **Git**
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Pasos para configurar el proyecto desde GitHub
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Clonar el repositorio
 
-## Laravel Sponsors
+```bash
+git clone https://github.com/UrieLBadilloG/k2i_backend.git
+cd k2i_backend
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Instalar dependencias de PHP con Composer
 
-### Premium Partners
+```bash
+composer install
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+### Configurar el archivo `.env`
 
-## Contributing
+Copia el archivo de ejemplo:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+cp .env.example .env
+```
 
-## Code of Conduct
+Configura los valores de conexión a la base de datos en el archivo `.env`:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=<NOMBRE_DE_TU_BD>
+DB_USERNAME=<USUARIO>
+DB_PASSWORD=<CONTRASEÑA>
+```
 
-## Security Vulnerabilities
+### Generar la clave de la aplicación
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+php artisan key:generate
+```
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Configurar las migraciones y restaurar tablas
+
+Si las migraciones originales no están disponibles, las tablas se encuentran en la carpeta `backup`. Importa las tablas desde esta carpeta a tu base de datos utilizando herramientas como HeidiSQL o phpMyAdmin.
+
+Si prefieres usar migraciones:
+
+```bash
+php artisan migrate
+```
+
+### Ejecutar los procedimientos almacenados (SP)
+
+Copia y pega los siguientes SP en tu herramienta MySQL (como phpMyAdmin o un cliente MySQL):
+
+```sql
+DELIMITER $$
+
+CREATE PROCEDURE migrate_data()
+BEGIN
+    INSERT INTO persona (nombre, paterno, materno)
+    SELECT DISTINCT nombre, paterno, materno FROM temporal;
+
+    INSERT INTO telefono (persona_id, telefono)
+    SELECT p.id, t.telefono FROM temporal t
+    INNER JOIN persona p ON t.nombre = p.nombre AND t.paterno = p.paterno AND t.materno = p.materno;
+
+    INSERT INTO direccion (persona_id, calle, numero_exterior, numero_interior, colonia, cp)
+    SELECT p.id, t.calle, t.numero_exterior, t.numero_interior, t.colonia, t.cp
+    FROM temporal t
+    INNER JOIN persona p ON t.nombre = p.nombre AND t.paterno = p.paterno AND t.materno = p.materno;
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE paginate_personas(IN start_index INT, IN page_size INT)
+BEGIN
+    SELECT p.id AS persona_id, p.nombre, p.paterno, p.materno, t.telefono, d.calle, d.numero_exterior, d.numero_interior, d.colonia, d.cp
+    FROM persona p
+    LEFT JOIN telefono t ON p.id = t.persona_id
+    LEFT JOIN direccion d ON p.id = d.persona_id
+    LIMIT start_index, page_size;
+END$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE get_persona_details(IN persona_id INT)
+BEGIN
+    SELECT p.id AS persona_id, p.nombre, p.paterno, p.materno, t.telefono, d.calle, d.numero_exterior, d.numero_interior, d.colonia, d.cp
+    FROM persona p
+    LEFT JOIN telefono t ON p.id = t.persona_id
+    LEFT JOIN direccion d ON p.id = d.persona_id
+    WHERE p.id = persona_id;
+END$$
+DELIMITER ;
+```
+
+---
+
+### Iniciar el servidor
+
+```bash
+php artisan serve
+```
+
+---
+
+## Endpoints de la API
+
+### 1. Autenticación
+
+#### `POST /api/login`
+
+- Descripción: Inicia sesión y devuelve un token de acceso.
+- Body:
+```json
+{
+  "email": "admin@example.com",
+  "password": "password123"
+}
+```
+
+- Respuesta exitosa:
+```json
+{
+  "token": "Bearer <TOKEN>"
+}
+```
+
+#### `POST /api/logout`
+
+- Descripción: Cierra la sesión del usuario autenticado.
+- Headers:
+```
+Authorization: Bearer <TOKEN>
+```
+
+- Respuesta exitosa:
+```json
+{
+  "message": "Sesión cerrada exitosamente"
+}
+```
+
+#### `GET /api/user`
+
+- Descripción: Devuelve información del usuario autenticado.
+- Headers:
+```
+Authorization: Bearer <TOKEN>
+```
+
+---
+
+### 2. Carga de datos
+
+#### `POST /api/upload-excel`
+
+- Descripción: Carga un archivo Excel al servidor y migra los datos a la base de datos.
+- Headers:
+```
+Authorization: Bearer <TOKEN_ADMIN>
+```
+
+- Body (multipart/form-data):
+```
+file: <archivo_excel.xlsx>
+```
+
+- Respuesta exitosa:
+```json
+{
+  "message": "Archivo cargado y datos migrados exitosamente"
+}
+```
+
+---
+
+### 3. Consulta de datos
+
+#### `GET /api/personas`
+
+- Descripción: Devuelve una lista paginada de personas.
+- Headers:
+```
+Authorization: Bearer <TOKEN>
+```
+
+- Query Params:
+```
+page=1&page_size=100
+```
+
+- Respuesta exitosa:
+```json
+[
+  {
+    "id": 1,
+    "nombre": "Juan",
+    "paterno": "Pérez",
+    "materno": "Ramírez",
+    "telefono": ["5551234567"],
+    "direccion": [
+      {
+        "calle": "Primera",
+        "numero_exterior": "101",
+        "numero_interior": "A",
+        "colonia": "Centro",
+        "cp": "12345"
+      }
+    ]
+  }
+]
+```
+
+#### `GET /api/persona/{id}`
+
+- Descripción: Devuelve detalles de una persona específica.
+- Headers:
+```
+Authorization: Bearer <TOKEN>
+```
+
+- Respuesta exitosa:
+```json
+{
+  "id": 1,
+  "nombre": "Juan",
+  "paterno": "Pérez",
+  "materno": "Ramírez",
+  "telefonos": ["5551234567"],
+  "direcciones": [
+    {
+      "calle": "Primera",
+      "numero_exterior": "101",
+      "numero_interior": "A",
+      "colonia": "Centro",
+      "cp": "12345"
+    }
+  ]
+}
+```
+
+---
+
+## Roles y Middlewares
+
+### Roles soportados:
+
+- `admin`: Puede cargar datos y consultar.
+- `user`: Solo puede consultar.
+
+### Middlewares personalizados:
+
+- `isAdmin`: Solo permite acceso a usuarios con rol `admin`.
+- `isUser`: Permite acceso a cualquier usuario autenticado.
