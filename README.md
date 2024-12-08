@@ -43,7 +43,7 @@ composer install
 Copia el archivo de ejemplo:
 
 ```bash
-cp .env.example .env
+.env
 ```
 
 Configura los valores de conexión a la base de datos en el archivo `.env`:
