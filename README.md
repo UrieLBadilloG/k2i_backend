@@ -1,4 +1,3 @@
-
 ## Requisitos del Proyecto
 
 1. **Login en Laravel con OAuth2**, debidamente validado.
@@ -40,11 +39,7 @@ composer install
 
 ### Configurar el archivo `.env`
 
-Copia el archivo de ejemplo:
 
-```bash
-.env
-```
 
 Configura los valores de conexión a la base de datos en el archivo `.env`:
 
@@ -281,3 +276,58 @@ Authorization: Bearer <TOKEN>
 
 - `isAdmin`: Solo permite acceso a usuarios con rol `admin`.
 - `isUser`: Permite acceso a cualquier usuario autenticado.
+
+---
+
+## Crear un Usuario desde la Consola en Laravel
+
+Para crear un usuario desde la consola en Laravel, puedes utilizar el tinker de Artisan. Aquí están los pasos:
+
+### 1. Accede al tinker de Artisan
+
+En la terminal, ejecuta el siguiente comando desde la raíz del proyecto Laravel:
+
+```bash
+php artisan tinker
+```
+
+### 2. Crea un nuevo usuario
+
+Usa el modelo `User` para crear un usuario nuevo directamente desde la consola. Por ejemplo:
+
+#### Crear un usuario administrador:
+
+```php
+\App\Models\User::create([
+    'name' => 'Admin User',
+    'email' => 'admin@example.com',
+    'password' => bcrypt('password123'),
+    'role' => 'admin',
+]);
+```
+
+#### Crear un usuario con permisos básicos:
+
+```php
+\App\Models\User::create([
+    'name' => 'Normal User',
+    'email' => 'user@example.com',
+    'password' => bcrypt('password123'),
+    'role' => 'user',
+]);
+```
+
+### 3. Verifica que el usuario se haya creado
+
+Puedes verificar el usuario ejecutando:
+
+```php
+\App\Models\User::all();
+```
+
+### 4. Salir de tinker
+
+Escribe `exit` y presiona Enter para salir del entorno interactivo.
+
+---
+
